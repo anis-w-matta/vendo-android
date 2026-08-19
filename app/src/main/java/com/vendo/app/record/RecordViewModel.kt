@@ -129,8 +129,12 @@ class RecordViewModel @Inject constructor(
                 val phonePart = "salesman:$loginId".toRequestBody("text/plain".toMediaType())
                 val transcriptPart = state.transcript.toRequestBody("text/plain".toMediaType())
                 val languagePart = (detectedLanguage ?: "ar").toRequestBody("text/plain".toMediaType())
+                val submitModePart = (if (accept) "accept" else "draft")
+                    .toRequestBody("text/plain".toMediaType())
 
-                val ingestResult = api.ingestVoice(phonePart, audioPart, transcriptPart, languagePart)
+                val ingestResult = api.ingestVoice(
+                    phonePart, audioPart, transcriptPart, languagePart, submitModePart,
+                )
 
                 if (!accept) {
                     _uiState.value = RecordUiState()

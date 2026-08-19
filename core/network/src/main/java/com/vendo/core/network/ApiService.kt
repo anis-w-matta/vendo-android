@@ -48,6 +48,7 @@ interface ApiService {
         @Part audio: MultipartBody.Part,
         @Part("transcript") transcript: RequestBody?,
         @Part("language") language: RequestBody?,
+        @Part("submit_mode") submitMode: RequestBody?,
     ): IngestVoiceOut
 
     @GET("ingest/voice/{voiceId}")

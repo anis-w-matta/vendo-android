@@ -19,6 +19,12 @@ data class ActivityLogOut(
     val details: Map<String, JsonElement> = emptyMap(),
 )
 
+/** The three event types LOG QUERY surfaces - everything else logged by the
+ * backend (item_classified, reorder_resolved, unrecognized_command,
+ * audio_too_long, error, update_rejected, ...) is internal/diagnostic, not
+ * a salesman-facing order decision, and stays out of this screen. */
+val LOG_QUERY_EVENT_TYPES = listOf("order_committed", "request_rejected", "voice_received")
+
 /** Maps PendingRequest.primary_intent (carried in details.primary_intent
  * since the commit.py fix) to the LOG QUERY screen's display verb. See the
  * backend plan's "Log Query data source" note - only order_committed rows
@@ -34,5 +40,20 @@ fun ActivityLogOut.logQueryVerb(): String {
     }
 }
 
-fun ActivityLogOut.logQueryLine(): String =
-    "${logQueryVerb()}, ${cust_nb ?: "?"}, ${order_nb ?: "?"}"
+/** voice_received rows cover both "Accept" and "Draft" submissions
+ * (RecordViewModel.submit) - only the draft ones are worth a LOG QUERY
+ * line of their own, since an accepted one gets its own order_committed
+ * (or request_rejected) row once decided. */
+fun ActivityLogOut.isDraftSubmission(): Boolean =
+    event_type == "voice_received" &&
+        details["submit_mode"]?.jsonPrimitive?.contentOrNull == "draft"
+
+fun ActivityLogOut.logQueryLine(): String = when (event_type) {
+    "order_committed" -> "${logQueryVerb()}, ${cust_nb ?: "?"}, ${order_nb ?: "?"}"
+    "request_rejected" -> {
+        val reason = details["reason"]?.jsonPrimitive?.contentOrNull ?: "-"
+        "REJECTED, ${cust_nb ?: "?"}, $reason"
+    }
+    "voice_received" -> "DRAFT, voice #${voice_message_id ?: "?"}, saved for later"
+    else -> "${event_type.uppercase()}, ${cust_nb ?: "?"}, ${order_nb ?: "?"}"
+}

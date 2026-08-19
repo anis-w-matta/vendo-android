@@ -11,18 +11,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -36,13 +41,19 @@ import com.vendo.core.network.dto.CandidateOut
 @Composable
 fun RequestScreen(
     onAccepted: () -> Unit,
+    onRejected: () -> Unit,
     viewModel: RequestViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showRejectDialog by remember { mutableStateOf(false) }
+    var rejectReason by remember { mutableStateOf("") }
 
     LaunchedEffect(state.accepted) {
         if (state.accepted) onAccepted()
+    }
+    LaunchedEffect(state.rejected) {
+        if (state.rejected) onRejected()
     }
 
     // state.error is shared between "couldn't load the request at all" and
@@ -81,6 +92,24 @@ fun RequestScreen(
                         val request = state.request!!
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             RequestCard {
+                                VoicePlaybackRow(
+                                    isPlaying = state.isPlayingAudio,
+                                    isLoading = state.isLoadingAudio,
+                                    onToggle = viewModel::togglePlayback,
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "TRANSCRIPT:",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = request.transcript?.takeIf { it.isNotBlank() } ?: "(no transcript)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
                                 LabeledRow("REQUEST TYPE:", request.primary_intent.uppercase())
                                 LabeledRow("CUST.NAME:", request.customer_name ?: "-")
                                 LabeledRow("ORDER-NUM:", request.target_order_nb ?: "-")
@@ -116,11 +145,21 @@ fun RequestScreen(
                             if (state.isSubmitting) {
                                 CircularProgressIndicator()
                             } else {
-                                PillButton(
-                                    text = "Accept",
-                                    variant = PillVariant.PrimaryBlue,
-                                    onClick = viewModel::accept,
-                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    PillButton(
+                                        text = "Reject",
+                                        variant = PillVariant.DarkGray,
+                                        onClick = {
+                                            rejectReason = ""
+                                            showRejectDialog = true
+                                        },
+                                    )
+                                    PillButton(
+                                        text = "Accept",
+                                        variant = PillVariant.PrimaryBlue,
+                                        onClick = viewModel::accept,
+                                    )
+                                }
                             }
                         }
                     }
@@ -128,9 +167,57 @@ fun RequestScreen(
             }
         }
 
+        if (showRejectDialog) {
+            AlertDialog(
+                onDismissRequest = { showRejectDialog = false },
+                title = { Text("Reject request") },
+                text = {
+                    OutlinedTextField(
+                        value = rejectReason,
+                        onValueChange = { rejectReason = it },
+                        placeholder = { Text("Reason") },
+                        singleLine = true,
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = rejectReason.isNotBlank(),
+                        onClick = {
+                            showRejectDialog = false
+                            viewModel.reject(rejectReason)
+                        },
+                    ) { Text("Reject") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRejectDialog = false }) { Text("Cancel") }
+                },
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun VoicePlaybackRow(isPlaying: Boolean, isLoading: Boolean, onToggle: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        } else {
+            PillButton(
+                text = if (isPlaying) "⏸ PAUSE" else "▶ PLAY",
+                variant = PillVariant.DarkBlue,
+                onClick = onToggle,
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = "VOICE RECORDING",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

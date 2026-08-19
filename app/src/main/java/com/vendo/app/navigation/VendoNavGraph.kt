@@ -121,11 +121,16 @@ fun VendoNavGraph(
                         },
                     ),
                 ) {
-                    RequestScreen(onAccepted = {
-                        navController.navigate(VendoDestinations.LOG_QUERY) {
-                            popUpTo(VendoDestinations.RECORD)
-                        }
-                    })
+                    RequestScreen(
+                        onAccepted = {
+                            navController.navigate(VendoDestinations.LOG_QUERY) {
+                                popUpTo(VendoDestinations.RECORD)
+                            }
+                        },
+                        onRejected = {
+                            navController.popBackStack(VendoDestinations.RECORD, inclusive = false)
+                        },
+                    )
                 }
                 composable(VendoDestinations.LOG_QUERY) {
                     LogQueryScreen()

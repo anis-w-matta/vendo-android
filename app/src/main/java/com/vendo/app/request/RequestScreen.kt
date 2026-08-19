@@ -1,7 +1,6 @@
 package com.vendo.app.request
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -66,7 +67,7 @@ fun RequestScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -239,6 +240,46 @@ private fun LabeledRow(label: String, value: String) {
     }
 }
 
+/** Every candidate the backend resolved for this line (match_item.py's
+ * top-scoring matches, already sorted most-to-least probable) as a real
+ * dropdown - available whether or not the line auto-resolved, so a
+ * confident-but-wrong auto-pick can still be overridden. Selecting one
+ * writes its item_nb (the catalogue id), never just its description -
+ * see RequestViewModel.selectCandidate. */
+@Composable
+private fun CandidateDropdown(
+    candidates: List<CandidateOut>,
+    selectedItemNb: String?,
+    onSelect: (CandidateOut) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        PillButton(
+            text = "MATCHES (${candidates.size}) ▾",
+            variant = PillVariant.DarkGray,
+            onClick = { expanded = true },
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            candidates.forEach { candidate ->
+                val selected = candidate.item_nb == selectedItemNb
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = "${if (selected) "✓ " else ""}" +
+                                "${candidate.item_desc} (${candidate.item_nb}) " +
+                                "- ${candidate.score.toInt()}%",
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(candidate)
+                    },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun ItemLine(
     line: EditableLine,
@@ -273,24 +314,21 @@ private fun ItemLine(
                     singleLine = true,
                 )
             }
-            if (line.itemNb == null && line.candidates.isNotEmpty()) {
+            if (line.candidates.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Unresolved - pick a match:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                line.candidates.forEach { candidate ->
+                if (line.itemNb == null) {
                     Text(
-                        text = "${candidate.item_desc} (${candidate.item_nb})",
+                        text = "Unresolved - pick a match:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp)
-                            .clickable { onCandidateSelected(candidate) },
+                        color = MaterialTheme.colorScheme.error,
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
+                CandidateDropdown(
+                    candidates = line.candidates,
+                    selectedItemNb = line.itemNb,
+                    onSelect = onCandidateSelected,
+                )
             } else if (line.itemNb == null) {
                 Text(
                     text = "Unresolved - no match found, type manually",

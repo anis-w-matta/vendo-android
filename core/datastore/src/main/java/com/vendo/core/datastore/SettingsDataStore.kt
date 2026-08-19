@@ -21,6 +21,7 @@ private object Keys {
     val AUTH_TOKEN = stringPreferencesKey("auth_token")
     val LOGIN_ID = stringPreferencesKey("login_id")
     val SALESMAN_NAME = stringPreferencesKey("salesman_name")
+    val SERVER_URL = stringPreferencesKey("server_url")
 }
 
 /** Backs the theme toggle (explicit LIGHT/DARK, persisted across launches)
@@ -58,5 +59,16 @@ class SettingsDataStore @Inject constructor(@ApplicationContext context: Context
             it.remove(Keys.LOGIN_ID)
             it.remove(Keys.SALESMAN_NAME)
         }
+    }
+
+    /** Salesman-entered backend address (Login screen), applied per-request
+     * by ServerUrlInterceptor - lets one build point at any network without
+     * a recompile. Null/blank means "use the compiled-in default". */
+    val serverUrl: Flow<String?> = store.data.map { it[Keys.SERVER_URL] }
+
+    suspend fun currentServerUrl(): String? = serverUrl.first()
+
+    suspend fun setServerUrl(url: String) {
+        store.edit { it[Keys.SERVER_URL] = url }
     }
 }

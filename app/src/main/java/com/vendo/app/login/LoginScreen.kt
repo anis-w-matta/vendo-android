@@ -65,6 +65,15 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 LoginField(
+                    label = "SERVER:",
+                    placeholder = "http://192.168.1.20:8000/",
+                    value = state.serverUrl,
+                    onValueChange = viewModel::onServerUrlChange,
+                    keyboardType = KeyboardType.Uri,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LoginField(
                     label = "ID:",
                     placeholder = "Enter ID",
                     value = state.id,
@@ -108,6 +117,7 @@ private fun LoginField(
     value: String,
     onValueChange: (String) -> Unit,
     isPassword: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -126,7 +136,7 @@ private fun LoginField(
             keyboardOptions = if (isPassword) {
                 KeyboardOptions(keyboardType = KeyboardType.Password)
             } else {
-                KeyboardOptions.Default
+                KeyboardOptions(keyboardType = keyboardType)
             },
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedContainerColor = VendoWhite,

@@ -3,9 +3,9 @@ package com.vendo.app.record
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vendo.core.datastore.SettingsDataStore
+import com.vendo.core.audio.AudioRecorder
+import com.vendo.core.audio.WavWriter
 import com.vendo.core.network.ApiService
-import com.vendo.whisper.AudioRecorder
-import com.vendo.whisper.WavWriter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

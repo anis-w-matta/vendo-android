@@ -2,16 +2,21 @@ package com.vendo.core.designsystem
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.DeviceFontFamilyName
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// No exact font was identified from the reference screenshot. FontFamily.SansSerif
-// with heavy weight + tight letter spacing is the closest stock approximation
-// of the bold/condensed display look used for "VeNdO"/"RECORD"/"LOG QUERY".
-// To swap in a real bundled font: drop the .ttf into res/font/ and replace
-// FontFamily.SansSerif below with FontFamily(Font(R.font.<name>)).
-val VendoDisplayFamily = FontFamily.SansSerif
+// No exact font was identified from the reference screenshot. Android ships
+// a condensed/black system face ("sans-serif-black") on every device with
+// no bundled asset needed - a closer match to the bold/condensed display
+// look used for "VeNdO"/"RECORD"/"LOG QUERY" than the default Roboto that
+// FontFamily.SansSerif resolves to. To swap in a real bundled font instead:
+// drop the .ttf into res/font/ and replace this with FontFamily(Font(R.font.<name>)).
+val VendoDisplayFamily = FontFamily(
+    Font(familyName = DeviceFontFamilyName("sans-serif-black")),
+)
 
 val VendoTypography = Typography(
     displayLarge = TextStyle(

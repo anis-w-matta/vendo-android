@@ -30,6 +30,7 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.BASIC
         }
         return OkHttpClient.Builder()
+            .addInterceptor(ServerUrlInterceptor(settings))
             .addInterceptor(AuthInterceptor(settings, authEventBus))
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)

@@ -1,3 +1,14 @@
+> **Superseded (2026-08-19):** Milestone 3 (on-device whisper.cpp) was
+> abandoned after proving too slow on real hardware (minutes to transcribe
+> a few seconds of speech on a mid-range phone) and the `:whisper` module
+> was deleted. Transcription now happens server-side via Gemini
+> (`POST /ingest/transcribe-preview`), with the salesman reviewing/editing
+> the text before submitting - see `RecordViewModel.kt`. The Toolchain
+> state / RESUME HERE sections below are also stale: the project builds
+> successfully today (`app-debug.apk` / `app-release-unsigned.apk` exist).
+> Everything below is left as historical record of Milestones 1-2 and the
+> abandoned Milestone 3, not a current to-do list.
+
 # VeNdO — Progress / Handoff Notes (specific version)
 
 Backend: `C:\voiceorder` (existing repo, git-tracked, on branch `master`). Android app: `C:\VeNdO` (**new directory, NOT yet a git repo** — `git init` was never run here; do that before committing anything).

@@ -12,11 +12,19 @@ android {
 
     defaultConfig {
         minSdk = 24
-        // 10.0.2.2 is the Android emulator's alias for the host machine's
-        // localhost - this reaches a backend run via `uvicorn` on the same
-        // dev machine. For a physical device on the same network, replace
-        // with that machine's LAN IP, e.g. "http://192.168.1.20:8000/".
-        buildConfigField("String", "BASE_URL", "\"http://10.50.26.77:8000/\"")
+        // Fallback only - the salesman enters the real server address on
+        // the Login screen (persisted via SettingsDataStore, applied by
+        // ServerUrlInterceptor) so the same build works on any network.
+        // This value is just what a fresh install shows as a starting
+        // point: 10.0.2.2 is the Android emulator's alias for the host
+        // machine's localhost.
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"")
+        // Shared-secret gate matching the backend's optional `api_key`
+        // setting (app/config.py) - blank means the header is omitted and
+        // the backend's check stays a no-op, same as today. Set this (and
+        // the matching backend .env value) before deploying anywhere the
+        // port is reachable beyond localhost/trusted LAN.
+        buildConfigField("String", "API_KEY", "\"\"")
     }
 
     buildFeatures {

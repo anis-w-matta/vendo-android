@@ -1,0 +1,230 @@
+package com.vendo.app.request
+
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.vendo.app.common.ErrorSnackbarEffect
+import com.vendo.core.designsystem.components.PillButton
+import com.vendo.core.designsystem.components.PillVariant
+import com.vendo.core.designsystem.components.RequestCard
+import com.vendo.core.network.dto.CandidateOut
+
+@Composable
+fun RequestScreen(
+    onAccepted: () -> Unit,
+    viewModel: RequestViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.accepted) {
+        if (state.accepted) onAccepted()
+    }
+
+    // state.error is shared between "couldn't load the request at all" and
+    // "the Accept submission failed" - only the former should replace the
+    // whole card below; the latter surfaces as a snackbar so a failed
+    // Accept doesn't wipe out the user's in-progress edits.
+    ErrorSnackbarEffect(state.error?.takeIf { state.request != null }, snackbarHostState)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Request",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            val contentKey = when {
+                state.isLoading -> "loading"
+                state.request == null -> "error"
+                else -> "content"
+            }
+            Crossfade(targetState = contentKey, label = "request-content") { key ->
+                when (key) {
+                    "loading" -> CircularProgressIndicator()
+                    "error" -> Text(
+                        text = state.error ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    else -> {
+                        val request = state.request!!
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            RequestCard {
+                                LabeledRow("REQUEST TYPE:", request.primary_intent.uppercase())
+                                LabeledRow("CUST.NAME:", request.customer_name ?: "-")
+                                LabeledRow("ORDER-NUM:", request.target_order_nb ?: "-")
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "ITEMS:",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                state.editableLines.forEach { line ->
+                                    ItemLine(
+                                        line = line,
+                                        isEditing = state.isEditing,
+                                        onDescChange = { viewModel.updateLine(line.lineNb, itemDesc = it) },
+                                        onQtyChange = { viewModel.updateLine(line.lineNb, qty = it) },
+                                        onUomChange = { viewModel.updateLine(line.lineNb, uom = it) },
+                                        onCandidateSelected = { viewModel.selectCandidate(line.lineNb, it) },
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    PillButton(
+                                        text = "EDIT",
+                                        variant = PillVariant.DarkGray,
+                                        onClick = viewModel::toggleEdit,
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            if (state.isSubmitting) {
+                                CircularProgressIndicator()
+                            } else {
+                                PillButton(
+                                    text = "Accept",
+                                    variant = PillVariant.PrimaryBlue,
+                                    onClick = viewModel::accept,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun LabeledRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun ItemLine(
+    line: EditableLine,
+    isEditing: Boolean,
+    onDescChange: (String) -> Unit,
+    onQtyChange: (String) -> Unit,
+    onUomChange: (String) -> Unit,
+    onCandidateSelected: (CandidateOut) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        if (isEditing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                OutlinedTextField(
+                    value = line.itemDesc,
+                    onValueChange = onDescChange,
+                    modifier = Modifier.weight(2f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = line.qty,
+                    onValueChange = onQtyChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = line.uom,
+                    onValueChange = onUomChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+            }
+            if (line.itemNb == null && line.candidates.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Unresolved - pick a match:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                line.candidates.forEach { candidate ->
+                    Text(
+                        text = "${candidate.item_desc} (${candidate.item_nb})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clickable { onCandidateSelected(candidate) },
+                    )
+                }
+            } else if (line.itemNb == null) {
+                Text(
+                    text = "Unresolved - no match found, type manually",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = line.itemDesc,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "${line.qty} ${line.uom}".trim(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}

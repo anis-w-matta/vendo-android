@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vendo.app.common.ErrorSnackbarEffect
+import com.vendo.core.designsystem.VendoGray
 import com.vendo.core.designsystem.VendoPrimaryBlue
 import com.vendo.core.designsystem.VendoWhite
 import com.vendo.core.designsystem.components.PillButton
@@ -139,8 +140,17 @@ private fun LoginField(
                 KeyboardOptions(keyboardType = keyboardType)
             },
             colors = OutlinedTextFieldDefaults.colors(
+                // Login's white/blue split background is fixed regardless
+                // of the app's dark-mode toggle (spec section 10/38) - the
+                // field's text/placeholder must be pinned to match, or
+                // dark mode's white MaterialTheme.colorScheme.onSurface
+                // text becomes invisible against this always-white field.
                 unfocusedContainerColor = VendoWhite,
                 focusedContainerColor = VendoWhite,
+                unfocusedTextColor = androidx.compose.ui.graphics.Color.Black,
+                focusedTextColor = androidx.compose.ui.graphics.Color.Black,
+                unfocusedPlaceholderColor = VendoGray,
+                focusedPlaceholderColor = VendoGray,
             ),
             modifier = Modifier.fillMaxWidth(),
         )

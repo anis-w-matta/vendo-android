@@ -344,7 +344,10 @@ private fun ItemLine(
         } else {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = line.itemDesc,
+                    // Show the catalogue item number, not the description -
+                    // falls back to the description/raw text when the line
+                    // is unresolved and has no item_nb yet.
+                    text = line.itemNb ?: line.itemDesc,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),

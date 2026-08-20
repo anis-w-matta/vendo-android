@@ -1,5 +1,6 @@
 package com.vendo.app.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
@@ -50,6 +51,13 @@ fun VendoNavGraph(
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    // ModalNavigationDrawer doesn't consume system back on its own - without
+    // this, back-while-open falls through to the Activity and exits the app
+    // instead of just closing the drawer.
+    BackHandler(enabled = drawerState.isOpen) {
+        scope.launch { drawerState.close() }
+    }
 
     LaunchedEffect(Unit) {
         appViewModel.authEvents.collect { event ->

@@ -1,13 +1,78 @@
 > **Superseded (2026-08-19):** Milestone 3 (on-device whisper.cpp) was
 > abandoned after proving too slow on real hardware (minutes to transcribe
 > a few seconds of speech on a mid-range phone) and the `:whisper` module
-> was deleted. Transcription now happens server-side via Gemini
+> was deleted (renamed/reduced to `:core:audio`, just the mic-capture/WAV
+> code). Transcription happens server-side via Gemini
 > (`POST /ingest/transcribe-preview`), with the salesman reviewing/editing
 > the text before submitting - see `RecordViewModel.kt`. The Toolchain
 > state / RESUME HERE sections below are also stale: the project builds
-> successfully today (`app-debug.apk` / `app-release-unsigned.apk` exist).
-> Everything below is left as historical record of Milestones 1-2 and the
-> abandoned Milestone 3, not a current to-do list.
+> successfully today, `git init` has been run (`C:\vendo`, several commits
+> on top of the original scaffold), and a debug APK has been installed and
+> run on a real phone via `adb`/`adb reverse`. Everything below Milestone 5
+> is left as historical record, not a current to-do list.
+
+## ⏭️ Current state / what's next (2026-08-19)
+
+Done this session, across both `C:\vendo` and `C:\voiceorder`:
+- Deleted the dead `:whisper` native/JNI/model-download code; kept audio
+  capture as `:core:audio`.
+- Backend security: `/ingest/voice` and `/ingest/transcribe-preview` now
+  require a logged-in salesman (previously open to anyone reaching the
+  port); `X-Api-Key` support added client-side so the backend's optional
+  shared-secret gate can be turned on without breaking the app.
+- Server address is now entered on the Login screen (`SettingsDataStore` +
+  `ServerUrlInterceptor`) instead of a compile-time IP - works across
+  networks, no rebuild needed.
+- Request screen: PLAY/PAUSE for the original recording + transcript
+  shown above the order details; REJECT button (with a required reason,
+  now actually logged - see below); every line's item candidates are a
+  real ranked dropdown, not just shown when unresolved.
+- `GET /queue` excludes committed/rejected requests by default - a
+  decided request stops reappearing as "the current request."
+- Log Query now surfaces rejections and draft submissions, not just
+  committed orders (`request_rejected`/`voice_received` activity events,
+  previously only `order_committed` was ever logged/fetched).
+- Backend dead-code removal finished/committed (billing/mailer/lead/
+  classifier/flagger/extraction modules and their tests - all pre-existing
+  uncommitted deletions, verified safe and committed).
+- **Big one:** the deterministic anchor-phrase grammar
+  (`command_parser.py`/`anchor_phrases.json`) is gone, replaced by
+  `app/services/gemini_command_extractor.py` - Gemini now classifies
+  place_order/return_order/reorder and extracts customer/item/quantity
+  spans; `match_customer.py`/`item_resolver.py`/`match_qty_uom.py` are
+  unchanged, so a hallucinated item/customer is still structurally
+  impossible (Gemini only finds span boundaries, DB lookups still gate
+  everything). `gemini_rpm_limit` raised 10→20 since every voice message
+  now makes two Gemini calls instead of one. Verified 100% pass rate on
+  `evaluate.py`'s hand-labeled cases (must be run with an explicit
+  `DATABASE_URL=...voiceorder_test...` env var prefix - the script's own
+  test-schema override silently no-ops due to a pre-existing import-order
+  bug, **not fixed, still open**, see below).
+- Fixed invisible white-on-white Login screen text in dark mode.
+
+**Open / next:**
+1. Re-verify end-to-end on a real phone now that the worker runs live
+   Gemini extraction instead of the old grammar (re-try the "Tendrex"
+   mis-transcription case from earlier in this session; backend + worker
+   are currently running via `uvicorn`/`python -m app.worker` in
+   background tasks, phone reachable via `adb reverse tcp:8000 tcp:8000`
+   over USB - Wi-Fi is on a "Guest Wi-Fi" network with client isolation,
+   so USB is the reliable path today).
+2. Visually confirm the dark-mode Login fix on-device (not yet screenshot-
+   verified, only compile-checked).
+3. `evaluate.py`'s `run_self_contained()`/`DATABASE_URL` test-schema
+   override doesn't actually take effect (settings are read at first
+   `app.config` import, which happens before the override line runs) -
+   currently worked around by setting `DATABASE_URL` as a real shell env
+   var before launching Python. Worth a real fix if this harness gets run
+   often.
+4. Check the account's actual Gemini quota in AI Studio against the new
+   `gemini_rpm_limit=20` (raised from 10, not verified against a real
+   quota number).
+5. Font is now Android's system `sans-serif-black` (not a bundled asset,
+   no pixel-matching done against the original reference image/spec - see
+   Milestone 4 below for what "pixel-accurate" was originally supposed to
+   mean, since that was never actually verified).
 
 # VeNdO — Progress / Handoff Notes (specific version)
 

@@ -2,6 +2,7 @@ package com.vendo.app.menu
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vendo.core.designsystem.VendoPrimaryBlue
 import com.vendo.core.designsystem.components.MenuListItem
+import com.vendo.core.designsystem.vendoContentMaxWidth
+import com.vendo.core.designsystem.vendoScreenPadding
 
 /** Blue-dominant background per the reference; four stacked light rows,
  * no icons/arrows/descriptions - spec section 14. */
@@ -25,22 +28,29 @@ fun MenuScreen(
     onChangePassword: () -> Unit,
     onLogOut: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(VendoPrimaryBlue)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(VendoPrimaryBlue),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .vendoContentMaxWidth()
+                .padding(vendoScreenPadding(includeTopInset = true)),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MenuListItem(text = "ACCOUNT INFO", onClick = onAccountInfo)
-            MenuListItem(text = "LOG QUERY", onClick = onLogQuery)
-            MenuListItem(text = "CHANGE PASSWORD", onClick = onChangePassword)
-            MenuListItem(text = "LOG OUT", onClick = onLogOut)
+            Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MenuListItem(text = "ACCOUNT INFO", onClick = onAccountInfo)
+                MenuListItem(text = "LOG QUERY", onClick = onLogQuery)
+                MenuListItem(text = "CHANGE PASSWORD", onClick = onChangePassword)
+                MenuListItem(text = "LOG OUT", onClick = onLogOut)
+            }
         }
     }
 }

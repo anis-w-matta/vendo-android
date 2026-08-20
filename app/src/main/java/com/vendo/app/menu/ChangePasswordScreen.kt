@@ -3,6 +3,7 @@ package com.vendo.app.menu
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.vendo.app.common.ErrorSnackbarEffect
 import com.vendo.core.designsystem.components.PillButton
 import com.vendo.core.designsystem.components.PillVariant
+import com.vendo.core.designsystem.vendoContentMaxWidth
+import com.vendo.core.designsystem.vendoScreenPadding
 
 @Composable
 fun ChangePasswordScreen(
@@ -42,11 +45,13 @@ fun ChangePasswordScreen(
         if (state.done) onDone()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 24.dp),
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .vendoContentMaxWidth()
+                .padding(vendoScreenPadding()),
         ) {
             Text(text = "CHANGE PASSWORD", style = MaterialTheme.typography.headlineLarge)
             Spacer(modifier = Modifier.height(20.dp))

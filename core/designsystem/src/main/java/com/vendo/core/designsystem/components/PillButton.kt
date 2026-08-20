@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vendo.core.designsystem.VendoDarkGray
+import com.vendo.core.designsystem.VendoDimens
 
 enum class PillVariant { PrimaryBlue, DarkBlue, DarkGray }
 
@@ -40,7 +41,7 @@ fun PillButton(
             disabledContentColor = Color.White.copy(alpha = 0.7f),
         ),
         contentPadding = PaddingValues(horizontal = 32.dp, vertical = 10.dp),
-        modifier = modifier.defaultMinSize(minWidth = 140.dp),
+        modifier = modifier.defaultMinSize(minWidth = VendoDimens.PillButtonMinWidth),
     ) {
         Text(text = text, style = MaterialTheme.typography.labelLarge)
     }

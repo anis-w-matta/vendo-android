@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,6 +38,8 @@ import com.vendo.app.common.ErrorSnackbarEffect
 import com.vendo.core.designsystem.components.PillButton
 import com.vendo.core.designsystem.components.PillVariant
 import com.vendo.core.designsystem.components.RequestCard
+import com.vendo.core.designsystem.vendoContentMaxWidth
+import com.vendo.core.designsystem.vendoScreenPadding
 import com.vendo.core.network.dto.CandidateOut
 
 @Composable
@@ -63,11 +66,13 @@ fun RequestScreen(
     // Accept doesn't wipe out the user's in-progress edits.
     ErrorSnackbarEffect(state.error?.takeIf { state.request != null }, snackbarHostState)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 24.dp),
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .vendoContentMaxWidth()
+                .padding(vendoScreenPadding()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(

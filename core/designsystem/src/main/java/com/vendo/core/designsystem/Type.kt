@@ -57,4 +57,10 @@ val VendoTypography = Typography(
         fontSize = 15.sp,
         letterSpacing = 0.3.sp,
     ),
+    labelSmall = TextStyle(
+        fontFamily = VendoDisplayFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        letterSpacing = 0.3.sp,
+    ),
 )

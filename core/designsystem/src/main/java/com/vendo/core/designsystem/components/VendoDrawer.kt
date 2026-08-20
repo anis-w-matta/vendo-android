@@ -2,8 +2,8 @@ package com.vendo.core.designsystem.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
@@ -36,8 +36,8 @@ fun VendoDrawerContent(
                     selected = dest.route == currentRoute,
                     onClick = { onDestinationClick(dest.route) },
                     modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .width(220.dp),
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
                 )
             }
         }

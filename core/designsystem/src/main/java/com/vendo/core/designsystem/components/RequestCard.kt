@@ -11,7 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
+import com.vendo.core.designsystem.VendoDimens
 import com.vendo.core.designsystem.VendoPrimaryBlue
 
 /** Blue-bordered rounded card that hosts the Request screen's order details
@@ -25,10 +25,10 @@ fun RequestCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(VendoDimens.CardCornerRadius))
             .background(MaterialTheme.colorScheme.surface)
-            .border(2.dp, VendoPrimaryBlue, RoundedCornerShape(20.dp))
-            .padding(20.dp),
+            .border(VendoDimens.CardBorderWidth, VendoPrimaryBlue, RoundedCornerShape(VendoDimens.CardCornerRadius))
+            .padding(VendoDimens.CardPadding),
         content = content,
     )
 }

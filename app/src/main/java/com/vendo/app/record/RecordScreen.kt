@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,9 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vendo.app.common.ErrorSnackbarEffect
 import com.vendo.core.designsystem.VendoDarkGray
+import com.vendo.core.designsystem.VendoDimens
 import com.vendo.core.designsystem.VendoWhite
 import com.vendo.core.designsystem.components.PillButton
 import com.vendo.core.designsystem.components.PillVariant
+import com.vendo.core.designsystem.vendoContentMaxWidth
+import com.vendo.core.designsystem.vendoScreenPadding
 
 @Composable
 fun RecordScreen(
@@ -73,11 +77,13 @@ fun RecordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     ErrorSnackbarEffect(state.error, snackbarHostState)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 24.dp),
+                .fillMaxHeight()
+                .fillMaxWidth()
+                .vendoContentMaxWidth()
+                .padding(vendoScreenPadding()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -189,7 +195,7 @@ private fun recordCaption(state: RecordUiState): String = when {
 private fun RecordButton(isRecording: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(VendoDimens.RecordButtonSize)
             .clip(CircleShape)
             .background(VendoDarkGray)
             .border(2.dp, VendoDarkGray, CircleShape)
@@ -198,7 +204,7 @@ private fun RecordButton(isRecording: Boolean, enabled: Boolean, onClick: () -> 
     ) {
         Box(
             modifier = Modifier
-                .size(if (isRecording) 22.dp else 28.dp)
+                .size(if (isRecording) VendoDimens.RecordButtonDotSizeRecording else VendoDimens.RecordButtonDotSizeIdle)
                 .clip(if (isRecording) RoundedCornerShape(4.dp) else CircleShape)
                 .background(VendoWhite),
         )

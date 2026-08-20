@@ -20,12 +20,11 @@ private object Keys {
     val DARK_MODE = booleanPreferencesKey("dark_mode")
     val AUTH_TOKEN = stringPreferencesKey("auth_token")
     val LOGIN_ID = stringPreferencesKey("login_id")
-    val SALESMAN_NAME = stringPreferencesKey("salesman_name")
     val SERVER_URL = stringPreferencesKey("server_url")
 }
 
 /** Backs the theme toggle (explicit LIGHT/DARK, persisted across launches)
- * and the logged-in salesman's session - token/login_id/name cached from
+ * and the logged-in salesman's session - token/login_id cached from
  * POST /auth/login so the app can stay signed in between launches. */
 @Singleton
 class SettingsDataStore @Inject constructor(@ApplicationContext context: Context) {
@@ -43,13 +42,10 @@ class SettingsDataStore @Inject constructor(@ApplicationContext context: Context
 
     val loginId: Flow<String?> = store.data.map { it[Keys.LOGIN_ID] }
 
-    val salesmanName: Flow<String?> = store.data.map { it[Keys.SALESMAN_NAME] }
-
-    suspend fun saveSession(token: String, loginId: String, name: String) {
+    suspend fun saveSession(token: String, loginId: String) {
         store.edit {
             it[Keys.AUTH_TOKEN] = token
             it[Keys.LOGIN_ID] = loginId
-            it[Keys.SALESMAN_NAME] = name
         }
     }
 
@@ -57,7 +53,6 @@ class SettingsDataStore @Inject constructor(@ApplicationContext context: Context
         store.edit {
             it.remove(Keys.AUTH_TOKEN)
             it.remove(Keys.LOGIN_ID)
-            it.remove(Keys.SALESMAN_NAME)
         }
     }
 

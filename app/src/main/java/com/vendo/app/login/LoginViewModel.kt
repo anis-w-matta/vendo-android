@@ -61,7 +61,7 @@ class LoginViewModel @Inject constructor(
             try {
                 settings.setServerUrl(state.serverUrl.trim())
                 val result = api.login(LoginIn(login_id = state.id, password = state.password))
-                settings.saveSession(result.token, result.login_id, result.name)
+                settings.saveSession(result.token, result.login_id)
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 onSuccess()
             } catch (e: Exception) {

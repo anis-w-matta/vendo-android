@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.vendo.core.designsystem.VendoBlack
+import com.vendo.core.designsystem.VendoDimens
 import com.vendo.core.designsystem.VendoWhite
 
 /** Stacked light rounded row used on the MENU screen (ACCOUNT INFO, LOG
@@ -24,8 +25,8 @@ fun MenuListItem(text: String, onClick: () -> Unit, modifier: Modifier = Modifie
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .height(VendoDimens.ListItemHeight)
+            .clip(RoundedCornerShape(VendoDimens.ListItemCornerRadius))
             .background(VendoWhite)
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp),

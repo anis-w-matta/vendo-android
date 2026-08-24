@@ -5,7 +5,9 @@ import com.vendo.core.network.dto.AcceptOut
 import com.vendo.core.network.dto.AccountUpdateIn
 import com.vendo.core.network.dto.ActivityLogOut
 import com.vendo.core.network.dto.CallbackIn
+import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.ChangePasswordIn
+import com.vendo.core.network.dto.CustomerCandidateOut
 import com.vendo.core.network.dto.IngestVoiceOut
 import com.vendo.core.network.dto.LoginIn
 import com.vendo.core.network.dto.LoginOut
@@ -67,6 +69,12 @@ interface ApiService {
 
     @GET("queue/{reqId}")
     suspend fun getRequest(@Path("reqId") reqId: Int): RequestDetail
+
+    @GET("items/search")
+    suspend fun searchItems(@Query("q") q: String): List<CandidateOut>
+
+    @GET("customers/search")
+    suspend fun searchCustomers(@Query("q") q: String): List<CustomerCandidateOut>
 
     @POST("queue/{reqId}/claim")
     suspend fun claim(@Path("reqId") reqId: Int): OkOut

@@ -10,7 +10,6 @@ object VendoDestinations {
     const val REQUEST_ARG = "requestId"
     const val REQUEST = "request?$REQUEST_ARG={$REQUEST_ARG}"
     const val LOG_QUERY = "logquery"
-    const val MENU = "menu"
     const val ACCOUNT = "menu/account"
     const val CHANGE_PASSWORD = "menu/changepassword"
 

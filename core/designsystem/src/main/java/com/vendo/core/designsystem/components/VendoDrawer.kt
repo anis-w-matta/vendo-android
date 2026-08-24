@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-data class DrawerDestination(val label: String, val route: String)
+/** route is null for an action-only entry (Log Out) that doesn't navigate
+ * to a screen of its own - the caller decides what null means. */
+data class DrawerDestination(val label: String, val route: String?)
 
 /** Kept intentionally plain (spec section 15): a simple list of routes,
  * no icons, no large modern drawer chrome. */
@@ -20,7 +22,7 @@ data class DrawerDestination(val label: String, val route: String)
 fun VendoDrawerContent(
     destinations: List<DrawerDestination>,
     currentRoute: String?,
-    onDestinationClick: (String) -> Unit,
+    onDestinationClick: (DrawerDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier = modifier.fillMaxHeight()) {
@@ -33,8 +35,8 @@ fun VendoDrawerContent(
             destinations.forEach { dest ->
                 NavigationDrawerItem(
                     label = { Text(dest.label) },
-                    selected = dest.route == currentRoute,
-                    onClick = { onDestinationClick(dest.route) },
+                    selected = dest.route != null && dest.route == currentRoute,
+                    onClick = { onDestinationClick(dest) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),

@@ -53,7 +53,11 @@ fun ChangePasswordScreen(
                 .vendoContentMaxWidth()
                 .padding(vendoScreenPadding()),
         ) {
-            Text(text = "CHANGE PASSWORD", style = MaterialTheme.typography.headlineLarge)
+            Text(
+                text = "CHANGE PASSWORD",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(

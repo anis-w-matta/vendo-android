@@ -52,8 +52,15 @@ fun ActivityLogOut.logQueryLine(): String = when (event_type) {
     "order_committed" -> "${logQueryVerb()}, ${cust_nb ?: "?"}, ${order_nb ?: "?"}"
     "request_rejected" -> {
         val reason = details["reason"]?.jsonPrimitive?.contentOrNull ?: "-"
-        "REJECTED, ${cust_nb ?: "?"}, $reason"
+        "REJECTED (${logQueryVerb()}), ${cust_nb ?: "?"}, $reason"
     }
     "voice_received" -> "DRAFT, voice #${voice_message_id ?: "?"}, saved for later"
     else -> "${event_type.uppercase()}, ${cust_nb ?: "?"}, ${order_nb ?: "?"}"
 }
+
+/** One LOG QUERY row: its display text, and the request it opens when
+ * tapped - null for rows with no request yet (a draft voice submission
+ * hasn't been turned into a PendingRequest at the point it's logged). */
+data class LogQueryLine(val text: String, val requestId: Int?)
+
+fun ActivityLogOut.toLogQueryLine(): LogQueryLine = LogQueryLine(logQueryLine(), request_id)

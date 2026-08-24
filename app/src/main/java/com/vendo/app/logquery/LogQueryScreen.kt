@@ -21,15 +21,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vendo.core.designsystem.components.LogListItem
+import com.vendo.core.designsystem.components.PillButton
 import com.vendo.core.designsystem.vendoContentMaxWidth
 import com.vendo.core.designsystem.vendoScreenPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogQueryScreen(viewModel: LogQueryViewModel = hiltViewModel()) {
+fun LogQueryScreen(
+    onOpenRequest: (Int) -> Unit = {},
+    viewModel: LogQueryViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -60,14 +65,21 @@ fun LogQueryScreen(viewModel: LogQueryViewModel = hiltViewModel()) {
                 }
                 Crossfade(targetState = contentKey, label = "log-query-content") { key ->
                     when (key) {
-                        "error" -> Text(
-                            text = state.error ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        "error" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = state.error ?: "We couldn't load the activity log.",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            PillButton(text = "Try again", onClick = viewModel::refresh)
+                        }
                         "empty" -> Text(
-                            text = "No committed orders yet",
+                            text = "Nothing here yet. Orders you accept, reject, or save for " +
+                                "later will show up here.",
                             color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         else -> LazyColumn(
@@ -75,7 +87,10 @@ fun LogQueryScreen(viewModel: LogQueryViewModel = hiltViewModel()) {
                             modifier = Modifier.fillMaxSize(),
                         ) {
                             items(state.lines) { line ->
-                                LogListItem(text = line)
+                                LogListItem(
+                                    text = line.text,
+                                    onClick = line.requestId?.let { id -> { onOpenRequest(id) } },
+                                )
                             }
                         }
                     }

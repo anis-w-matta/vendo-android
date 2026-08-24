@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.dto.ChangePasswordIn
+import com.vendo.core.network.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +37,11 @@ class ChangePasswordViewModel @Inject constructor(private val api: ApiService) :
     fun submit() {
         val state = _uiState.value
         if (state.oldPassword.isBlank() || state.newPassword.isBlank()) {
-            _uiState.value = state.copy(error = "Fill in both fields")
+            // Clear first: an unchanged StateFlow value doesn't emit, so
+            // tapping Save twice while blank would otherwise show the
+            // snackbar only on the first tap.
+            _uiState.value = state.copy(error = null)
+            _uiState.value = _uiState.value.copy(error = "Fill in both fields")
             return
         }
         _uiState.value = state.copy(isSaving = true, error = null)
@@ -47,7 +52,7 @@ class ChangePasswordViewModel @Inject constructor(private val api: ApiService) :
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    error = "Current password is incorrect",
+                    error = e.toUserMessage("We couldn't change your password. Please try again."),
                 )
             }
         }

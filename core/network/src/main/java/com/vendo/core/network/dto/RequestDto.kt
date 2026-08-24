@@ -17,6 +17,14 @@ data class CandidateOut(
 )
 
 @Serializable
+data class CustomerCandidateOut(
+    val cust_nb: String,
+    val customer_name: String,
+    val phone_e164: String? = null,
+    val score: Double,
+)
+
+@Serializable
 data class LineOut(
     val line_nb: Int,
     val raw_text: String,
@@ -75,6 +83,8 @@ data class AcceptIn(
     val lines: List<LineEditIn>,
     val removed_line_nbs: List<Int> = emptyList(),
     val note: String? = null,
+    val cust_nb: String? = null,
+    val target_order_nb: String? = null,
 )
 
 @Serializable

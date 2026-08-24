@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.dto.ActivityLogOut
 import com.vendo.core.network.dto.LOG_QUERY_EVENT_TYPES
+import com.vendo.core.network.dto.LogQueryLine
 import com.vendo.core.network.dto.isDraftSubmission
-import com.vendo.core.network.dto.logQueryLine
+import com.vendo.core.network.dto.toLogQueryLine
+import com.vendo.core.network.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -18,7 +20,7 @@ import javax.inject.Inject
 
 data class LogQueryUiState(
     val isLoading: Boolean = true,
-    val lines: List<String> = emptyList(),
+    val lines: List<LogQueryLine> = emptyList(),
     val error: String? = null,
 )
 
@@ -51,10 +53,13 @@ class LogQueryViewModel @Inject constructor(
                     .sortedByDescending { it.ts }
                 _uiState.value = LogQueryUiState(
                     isLoading = false,
-                    lines = rows.map { it.logQueryLine() },
+                    lines = rows.map { it.toLogQueryLine() },
                 )
             } catch (e: Exception) {
-                _uiState.value = LogQueryUiState(isLoading = false, error = e.message ?: "Failed to load")
+                _uiState.value = LogQueryUiState(
+                    isLoading = false,
+                    error = e.toUserMessage("We couldn't load the activity log."),
+                )
             }
         }
     }

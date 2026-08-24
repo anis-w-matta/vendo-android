@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.dto.AccountUpdateIn
+import com.vendo.core.network.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +14,11 @@ import javax.inject.Inject
 
 data class AccountUiState(
     val isLoading: Boolean = true,
+    /** True only when the initial GET /auth/me failed - distinct from
+     * `error`, which is also used for a failed *save* on an already-loaded
+     * form. A load failure replaces the screen with a retry action; a save
+     * failure surfaces as a snackbar over the still-editable form. */
+    val loadFailed: Boolean = false,
     val name: String = "",
     val email: String = "",
     val isSaving: Boolean = false,
@@ -27,6 +33,15 @@ class AccountViewModel @Inject constructor(private val api: ApiService) : ViewMo
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
 
     init {
+        load()
+    }
+
+    fun retry() {
+        _uiState.value = AccountUiState(isLoading = true)
+        load()
+    }
+
+    private fun load() {
         viewModelScope.launch {
             try {
                 val me = api.me()
@@ -34,7 +49,11 @@ class AccountViewModel @Inject constructor(private val api: ApiService) : ViewMo
                     isLoading = false, name = me.name, email = me.email ?: "",
                 )
             } catch (e: Exception) {
-                _uiState.value = AccountUiState(isLoading = false, error = e.message)
+                _uiState.value = AccountUiState(
+                    isLoading = false,
+                    loadFailed = true,
+                    error = e.toUserMessage("We couldn't load your account."),
+                )
             }
         }
     }
@@ -55,7 +74,10 @@ class AccountViewModel @Inject constructor(private val api: ApiService) : ViewMo
                 api.updateMe(AccountUpdateIn(name = state.name, email = state.email))
                 _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isSaving = false, error = e.message ?: "Save failed")
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    error = e.toUserMessage("We couldn't save your changes."),
+                )
             }
         }
     }

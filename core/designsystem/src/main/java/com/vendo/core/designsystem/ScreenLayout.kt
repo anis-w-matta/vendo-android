@@ -47,7 +47,7 @@ private fun screenHorizontalPadding(): Dp =
  * The top inset is deliberately excluded by default: screens hosted under
  * VendoTopBar already sit below the status bar because the top bar itself
  * reserves that space - adding it again here would double-pad. Screens with
- * no top bar (Login, Menu) should pass [includeTopInset] = true.
+ * no top bar (only Login) should pass [includeTopInset] = true.
  */
 @Composable
 fun vendoScreenPadding(includeTopInset: Boolean = false): PaddingValues {

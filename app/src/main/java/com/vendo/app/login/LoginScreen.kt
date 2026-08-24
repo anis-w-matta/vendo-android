@@ -15,22 +15,36 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vendo.app.common.ErrorSnackbarEffect
@@ -50,6 +64,27 @@ fun LoginScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     ErrorSnackbarEffect(state.error, snackbarHostState)
+
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    // The server address is admin/dev configuration, not something an
+    // ordinary rep should have to look at every time they sign in - tucked
+    // behind this toggle instead of sitting on the form by default (spec:
+    // runtime server overrides should stay "appropriately tucked away").
+    // It still auto-expands on a fresh, never-configured install, and again
+    // if a login attempt fails to even reach the server - both cases where
+    // hiding it would leave the rep unable to tell why sign-in isn't working.
+    var showServerField by rememberSaveable { mutableStateOf(false) }
+    var serverFieldInitialized by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.serverUrlKnown) {
+        if (state.serverUrlKnown && !serverFieldInitialized) {
+            showServerField = !state.serverUrlConfigured
+            serverFieldInitialized = true
+        }
+    }
+    LaunchedEffect(state.error) {
+        if (state.error?.contains("reach that server") == true) showServerField = true
+    }
+    fun doLogin() = viewModel.login(onLoginSuccess)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -73,24 +108,16 @@ fun LoginScreen(
                 Text(
                     text = "VeNdO",
                     style = MaterialTheme.typography.displayLarge,
-                    color = androidx.compose.ui.graphics.Color.Black,
+                    color = Color.Black,
                 )
                 Spacer(modifier = Modifier.height(32.dp))
-
-                LoginField(
-                    label = "SERVER:",
-                    placeholder = "http://192.168.1.20:8000/",
-                    value = state.serverUrl,
-                    onValueChange = viewModel::onServerUrlChange,
-                    keyboardType = KeyboardType.Uri,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
 
                 LoginField(
                     label = "ID:",
                     placeholder = "Enter ID",
                     value = state.id,
                     onValueChange = viewModel::onIdChange,
+                    imeAction = ImeAction.Next,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -99,10 +126,46 @@ fun LoginScreen(
                     placeholder = "Enter password",
                     value = state.password,
                     onValueChange = viewModel::onPasswordChange,
-                    isPassword = true,
+                    visualTransformation = if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                    onImeDone = ::doLogin,
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                tint = VendoGray,
+                            )
+                        }
+                    },
                 )
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = { showServerField = !showServerField }) {
+                    Text(
+                        text = if (showServerField) "Hide server settings" else "Server settings",
+                        color = Color.Black,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (showServerField) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LoginField(
+                        label = "SERVER:",
+                        placeholder = "http://192.168.1.20:8000/",
+                        value = state.serverUrl,
+                        onValueChange = viewModel::onServerUrlChange,
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Next,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 if (state.isLoading) {
                     CircularProgressIndicator()
@@ -110,7 +173,7 @@ fun LoginScreen(
                     PillButton(
                         text = "LOGIN",
                         variant = PillVariant.DarkGray,
-                        onClick = { viewModel.login(onLoginSuccess) },
+                        onClick = ::doLogin,
                     )
                 }
             }
@@ -129,13 +192,16 @@ private fun LoginField(
     placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
-    isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    imeAction: ImeAction = ImeAction.Default,
+    onImeDone: (() -> Unit)? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            color = androidx.compose.ui.graphics.Color.Black,
+            color = Color.Black,
             style = MaterialTheme.typography.labelLarge,
         )
         OutlinedTextField(
@@ -144,13 +210,10 @@ private fun LoginField(
             placeholder = { Text(placeholder) },
             singleLine = true,
             shape = RoundedCornerShape(4.dp),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else
-                androidx.compose.ui.text.input.VisualTransformation.None,
-            keyboardOptions = if (isPassword) {
-                KeyboardOptions(keyboardType = KeyboardType.Password)
-            } else {
-                KeyboardOptions(keyboardType = keyboardType)
-            },
+            visualTransformation = visualTransformation,
+            trailingIcon = trailingIcon,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = KeyboardActions(onDone = { onImeDone?.invoke() }),
             colors = OutlinedTextFieldDefaults.colors(
                 // Login's white/blue split background is fixed regardless
                 // of the app's dark-mode toggle (spec section 10/38) - the
@@ -159,8 +222,8 @@ private fun LoginField(
                 // text becomes invisible against this always-white field.
                 unfocusedContainerColor = VendoWhite,
                 focusedContainerColor = VendoWhite,
-                unfocusedTextColor = androidx.compose.ui.graphics.Color.Black,
-                focusedTextColor = androidx.compose.ui.graphics.Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedTextColor = Color.Black,
                 unfocusedPlaceholderColor = VendoGray,
                 focusedPlaceholderColor = VendoGray,
             ),

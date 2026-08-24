@@ -6,6 +6,8 @@ import com.vendo.core.datastore.SettingsDataStore
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.BuildConfig
 import com.vendo.core.network.dto.LoginIn
+import com.vendo.core.network.isConnectivityFailure
+import com.vendo.core.network.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +19,13 @@ data class LoginUiState(
     val id: String = "",
     val password: String = "",
     val serverUrl: String = "",
+    /** True once we know whether a server address was already configured on
+     * this device (vs. still on the compiled-in placeholder) - drives
+     * whether the Login screen expands the server field by default, so a
+     * fresh install still surfaces it for first-time setup without showing
+     * it to every rep on every ordinary login thereafter. */
+    val serverUrlKnown: Boolean = false,
+    val serverUrlConfigured: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -31,9 +40,11 @@ class LoginViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val stored = settings.currentServerUrl()
+            val stored = settings.currentServerUrl()?.takeIf { it.isNotBlank() }
             _uiState.value = _uiState.value.copy(
-                serverUrl = stored?.takeIf { it.isNotBlank() } ?: BuildConfig.BASE_URL,
+                serverUrl = stored ?: BuildConfig.BASE_URL,
+                serverUrlKnown = true,
+                serverUrlConfigured = stored != null,
             )
         }
     }
@@ -67,7 +78,11 @@ class LoginViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Invalid ID/password, or can't reach that server",
+                    error = if (e.isConnectivityFailure()) {
+                        "We couldn't reach that server. Check the address and your connection."
+                    } else {
+                        e.toUserMessage("That ID or password wasn't recognized.")
+                    },
                 )
             }
         }

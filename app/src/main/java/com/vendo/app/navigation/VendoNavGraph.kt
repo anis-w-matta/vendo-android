@@ -24,7 +24,6 @@ import com.vendo.app.login.LoginScreen
 import com.vendo.app.logquery.LogQueryScreen
 import com.vendo.app.menu.AccountScreen
 import com.vendo.app.menu.ChangePasswordScreen
-import com.vendo.app.menu.MenuScreen
 import com.vendo.app.record.RecordScreen
 import com.vendo.app.request.RequestScreen
 import com.vendo.core.designsystem.components.DrawerDestination
@@ -37,7 +36,11 @@ private val DRAWER_DESTINATIONS = listOf(
     DrawerDestination("Record", VendoDestinations.RECORD),
     DrawerDestination("Request", VendoDestinations.requestRouteDefault()),
     DrawerDestination("Log Query", VendoDestinations.LOG_QUERY),
-    DrawerDestination("Menu", VendoDestinations.MENU),
+    DrawerDestination("Account Info", VendoDestinations.ACCOUNT),
+    DrawerDestination("Change Password", VendoDestinations.CHANGE_PASSWORD),
+    // route null: an action, not a screen - VendoNavGraph's
+    // onDestinationClick logs out instead of navigating.
+    DrawerDestination("Log Out", null),
 )
 
 @Composable
@@ -88,10 +91,16 @@ fun VendoNavGraph(
             VendoDrawerContent(
                 destinations = DRAWER_DESTINATIONS,
                 currentRoute = currentRoute,
-                onDestinationClick = { route ->
+                onDestinationClick = { dest ->
                     scope.launch { drawerState.close() }
-                    navController.navigate(route) {
-                        launchSingleTop = true
+                    val route = dest.route
+                    if (route != null) {
+                        navController.navigate(route) { launchSingleTop = true }
+                    } else {
+                        appViewModel.logOut()
+                        navController.navigate(VendoDestinations.LOGIN) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
                     }
                 },
             )
@@ -138,21 +147,15 @@ fun VendoNavGraph(
                         onRejected = {
                             navController.popBackStack(VendoDestinations.RECORD, inclusive = false)
                         },
+                        onCalledBack = {
+                            navController.popBackStack(VendoDestinations.RECORD, inclusive = false)
+                        },
                     )
                 }
                 composable(VendoDestinations.LOG_QUERY) {
-                    LogQueryScreen()
-                }
-                composable(VendoDestinations.MENU) {
-                    MenuScreen(
-                        onAccountInfo = { navController.navigate(VendoDestinations.ACCOUNT) },
-                        onLogQuery = { navController.navigate(VendoDestinations.LOG_QUERY) },
-                        onChangePassword = { navController.navigate(VendoDestinations.CHANGE_PASSWORD) },
-                        onLogOut = {
-                            appViewModel.logOut()
-                            navController.navigate(VendoDestinations.LOGIN) {
-                                popUpTo(navController.graph.id) { inclusive = true }
-                            }
+                    LogQueryScreen(
+                        onOpenRequest = { requestId ->
+                            navController.navigate(VendoDestinations.requestRoute(requestId))
                         },
                     )
                 }

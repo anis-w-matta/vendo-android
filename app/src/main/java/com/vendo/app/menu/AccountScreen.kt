@@ -32,7 +32,10 @@ import com.vendo.core.designsystem.vendoScreenPadding
 fun AccountScreen(viewModel: AccountViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    ErrorSnackbarEffect(state.error, snackbarHostState)
+    // state.error is shared between "couldn't load the account at all" and
+    // "a save failed" - only the latter should surface as a snackbar; the
+    // former replaces the whole screen with a retry action below.
+    ErrorSnackbarEffect(state.error?.takeIf { !state.loadFailed }, snackbarHostState)
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
@@ -42,11 +45,23 @@ fun AccountScreen(viewModel: AccountViewModel = hiltViewModel()) {
                 .vendoContentMaxWidth()
                 .padding(vendoScreenPadding()),
         ) {
-            Text(text = "ACCOUNT INFO", style = MaterialTheme.typography.headlineLarge)
+            Text(
+                text = "ACCOUNT INFO",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
             Spacer(modifier = Modifier.height(20.dp))
 
             if (state.isLoading) {
                 CircularProgressIndicator()
+            } else if (state.loadFailed) {
+                Text(
+                    text = state.error ?: "We couldn't load your account.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                PillButton(text = "Try again", onClick = viewModel::retry)
             } else {
                 OutlinedTextField(
                     value = state.name,

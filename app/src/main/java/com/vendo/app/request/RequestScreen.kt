@@ -77,20 +77,17 @@ import kotlinx.coroutines.launch
 fun RequestScreen(
     onAccepted: () -> Unit,
     onRejected: () -> Unit,
-    onCalledBack: () -> Unit,
     viewModel: RequestViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showRejectDialog by remember { mutableStateOf(false) }
-    var showCallbackDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val lineRequesters = remember { mutableMapOf<Int, BringIntoViewRequester>() }
 
     LaunchedEffect(state.accepted) { if (state.accepted) onAccepted() }
     LaunchedEffect(state.rejected) { if (state.rejected) onRejected() }
-    LaunchedEffect(state.calledBack) { if (state.calledBack) onCalledBack() }
 
     // state.error is shared between "couldn't load the request at all" and
     // "an action (accept/reject/search) failed" - only the former replaces
@@ -224,7 +221,6 @@ fun RequestScreen(
                                     onToggleEdit = viewModel::toggleEdit,
                                     onAccept = viewModel::accept,
                                     onReject = { showRejectDialog = true },
-                                    onCallback = { showCallbackDialog = true },
                                 )
                             }
                         }
@@ -240,15 +236,6 @@ fun RequestScreen(
                 onConfirm = { reason, note ->
                     showRejectDialog = false
                     viewModel.reject(reason, note)
-                },
-            )
-        }
-        if (showCallbackDialog) {
-            CallbackDialog(
-                onDismiss = { showCallbackDialog = false },
-                onConfirm = { note ->
-                    showCallbackDialog = false
-                    viewModel.requestCallback(note)
                 },
             )
         }
@@ -320,7 +307,7 @@ private fun HeaderSection(
         StatusBadge(text = statusPresentation.label, tone = statusPresentation.tone)
     }
     Spacer(Modifier.height(10.dp))
-    val customerLabel = selectedCustomer?.customer_name ?: request.customer_name ?: request.phone_e164
+    val customerLabel = selectedCustomer?.customer_name ?: request.customer_name
     if (customerLabel != null) {
         LabeledRow("Customer", customerLabel)
     } else if (isReturn || isReorder) {
@@ -488,7 +475,7 @@ private fun CustomerCandidateRow(candidate: CustomerCandidateOut, onClick: () ->
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = candidate.phone_e164?.let { "${candidate.cust_nb} · $it" } ?: candidate.cust_nb,
+            text = candidate.cust_nb,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -592,6 +579,33 @@ private fun ItemsSection(
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     }
+    // QRA bonus lines have no PendingLine of their own yet (see backend's
+    // preview_qra) - shown read-only, never editable/deletable like a
+    // real line, since Accept doesn't send them at all: the server adds
+    // the real one itself inside commit().
+    state.request?.qra_bonus_lines?.forEach { bonus ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = bonus.item_desc,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(6.dp))
+                StatusBadge(text = "FREE (QRA bonus)", tone = VendoTone.Positive)
+            }
+            Text(
+                text = "${bonus.qty} ${bonus.uom.orEmpty()}".trim(),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+    }
     if (state.isEditing && !state.isReadOnly) {
         Spacer(Modifier.height(4.dp))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -670,6 +684,12 @@ private fun ItemRow(
             }
             StatusBadge(text = label, tone = tone)
             changeLabel(line.change)?.let { StatusBadge(text = it, tone = VendoTone.Info) }
+            line.qraSubstitutedItemDesc?.let {
+                StatusBadge(text = "QRA: becomes \"$it\"", tone = VendoTone.Info)
+            }
+            line.qraUnitPrice?.let {
+                StatusBadge(text = "QRA price: $it", tone = VendoTone.Info)
+            }
             if (line.matchStatus == LineMatchStatus.CONFIRMED) {
                 matchMethodLabel(line.matchMethod)?.let {
                     Text(
@@ -772,7 +792,6 @@ private fun ActionsRow(
     onToggleEdit: () -> Unit,
     onAccept: () -> Unit,
     onReject: () -> Unit,
-    onCallback: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(
@@ -781,7 +800,6 @@ private fun ActionsRow(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             PillButton(text = "Reject", variant = PillVariant.DarkGray, onClick = onReject)
-            PillButton(text = "Callback", variant = PillVariant.DarkBlue, onClick = onCallback)
             PillButton(
                 text = "Accept",
                 variant = PillVariant.PrimaryBlue,
@@ -838,34 +856,6 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: (String, String?) -> 
                 enabled = selected != null,
                 onClick = { selected?.let { onConfirm(it, note.ifBlank { null }) } },
             ) { Text("Reject") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-@Composable
-private fun CallbackDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var note by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Needs customer callback") },
-        text = {
-            Column {
-                Text(
-                    "What needs to be confirmed with the customer before this order can go through?",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    placeholder = { Text("e.g. Confirm whether the customer wants 10L or 20L") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(enabled = note.isNotBlank(), onClick = { onConfirm(note) }) { Text("Mark for callback") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

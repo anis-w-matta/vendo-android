@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 data class QueueRow(
     val id: Int,
     val created_at: String,
-    val phone_e164: String? = null,
     val customer_name: String? = null,
     val cust_nb: String? = null,
     val primary_intent: String,

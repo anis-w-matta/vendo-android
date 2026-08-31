@@ -6,12 +6,12 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vendo.app.cache.CacheRepository
 import com.vendo.app.navigation.VendoDestinations
 import com.vendo.core.datastore.SettingsDataStore
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.BuildConfig
 import com.vendo.core.network.dto.AcceptIn
-import com.vendo.core.network.dto.CallbackIn
 import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.CustomerCandidateOut
 import com.vendo.core.network.dto.LineEditIn
@@ -50,6 +50,13 @@ data class EditableLine(
     val lineFlags: List<String> = emptyList(),
     val change: String? = null,
     val isRemoved: Boolean = false,
+    // QRA preview - what this line's price/item WOULD become at commit
+    // time under the customer's active QRA agreement, if any. Purely
+    // informational: itemNb/itemDesc/qty above still show what the
+    // salesman actually ordered, and this never affects Accept's payload.
+    val qraUnitPrice: String? = null,
+    val qraIsFree: Boolean = false,
+    val qraSubstitutedItemDesc: String? = null,
 ) {
     /** True if the candidate this line actually resolved to is the one the
      * resolver flagged as conflicting with a spoken size/color/promotion -
@@ -85,7 +92,6 @@ data class RequestUiState(
     val error: String? = null,
     val accepted: Boolean = false,
     val rejected: Boolean = false,
-    val calledBack: Boolean = false,
     val isPlayingAudio: Boolean = false,
     val isLoadingAudio: Boolean = false,
     val playbackPositionMs: Int = 0,
@@ -177,12 +183,13 @@ data class RequestUiState(
 
 /** Loads one PendingRequest, claims it (row-locked server-side against
  * concurrent reviewers), and drives every reviewer action on it: editing
- * lines, searching/replacing a matched product, accept, reject, callback,
- * and audio playback. */
+ * lines, searching/replacing a matched product, accept, reject, and audio
+ * playback. */
 @HiltViewModel
 class RequestViewModel @Inject constructor(
     private val api: ApiService,
     private val settings: SettingsDataStore,
+    private val cache: CacheRepository,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -373,7 +380,18 @@ class RequestViewModel @Inject constructor(
                 val results = api.searchCustomers(query.trim())
                 _uiState.value = _uiState.value.copy(customerCandidates = results)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.toUserMessage())
+                // No network (or the server's unreachable) - fall back to
+                // the offline cache (see CacheRepository, populated only
+                // when the operator taps Refresh) instead of leaving the
+                // picker stuck on an error with nothing to select.
+                val offline = runCatching {
+                    cache.searchCustomersOffline(query.trim())
+                }.getOrDefault(emptyList())
+                if (offline.isNotEmpty()) {
+                    _uiState.value = _uiState.value.copy(customerCandidates = offline)
+                } else {
+                    _uiState.value = _uiState.value.copy(error = e.toUserMessage())
+                }
             }
         }
     }
@@ -407,7 +425,17 @@ class RequestViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(editableLines = lines)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.toUserMessage())
+                // Same offline fallback as searchCustomer - see its comment.
+                val offline = runCatching { cache.searchItemsOffline(query.trim()) }
+                    .getOrDefault(emptyList())
+                if (offline.isNotEmpty()) {
+                    val lines = _uiState.value.editableLines.map { line ->
+                        if (line.lineNb == lineNb) line.copy(candidates = offline) else line
+                    }
+                    _uiState.value = _uiState.value.copy(editableLines = lines)
+                } else {
+                    _uiState.value = _uiState.value.copy(error = e.toUserMessage())
+                }
             }
         }
     }
@@ -421,21 +449,6 @@ class RequestViewModel @Inject constructor(
             try {
                 api.reject(request.id, RejectIn(reason = reason.trim(), note = note?.trim()?.ifBlank { null }))
                 _uiState.value = _uiState.value.copy(isSubmitting = false, rejected = true)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isSubmitting = false, error = e.toUserMessage())
-            }
-        }
-    }
-
-    fun requestCallback(note: String) {
-        val state = _uiState.value
-        val request = state.request ?: return
-        if (note.isBlank() || state.isReadOnly) return
-        _uiState.value = state.copy(isSubmitting = true, error = null)
-        viewModelScope.launch {
-            try {
-                api.callback(request.id, CallbackIn(note = note.trim()))
-                _uiState.value = _uiState.value.copy(isSubmitting = false, calledBack = true)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isSubmitting = false, error = e.toUserMessage())
             }
@@ -591,4 +604,7 @@ private fun LineOut.toEditable() = EditableLine(
     matchMethod = match_method,
     lineFlags = line_flags,
     change = change,
+    qraUnitPrice = qra_unit_price,
+    qraIsFree = qra_is_free,
+    qraSubstitutedItemDesc = qra_substituted_item_desc,
 )

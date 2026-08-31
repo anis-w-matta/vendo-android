@@ -20,8 +20,37 @@ data class CandidateOut(
 data class CustomerCandidateOut(
     val cust_nb: String,
     val customer_name: String,
-    val phone_e164: String? = null,
     val score: Double,
+)
+
+@Serializable
+data class CustomerCacheOut(
+    val cust_nb: String,
+    val customer_name: String,
+)
+
+@Serializable
+data class ItemCacheOut(
+    val item_nb: String,
+    val item_desc: String,
+    val category: String,
+)
+
+@Serializable
+data class RecentOrderLineOut(
+    val item_nb: String? = null,
+    val item_desc: String,
+    val qty: String,
+    val uom: String? = null,
+)
+
+@Serializable
+data class RecentOrderOut(
+    val order_nb: String,
+    val order_type: String,
+    val cust_nb: String,
+    val customer_name: String? = null,
+    val lines: List<RecentOrderLineOut> = emptyList(),
 )
 
 @Serializable
@@ -43,6 +72,24 @@ data class LineOut(
     val resolution_meta: Map<String, JsonElement> = emptyMap(),
     val attributes: Map<String, JsonElement> = emptyMap(),
     val qualifiers: Map<String, JsonElement> = emptyMap(),
+    // QRA preview (backend's preview_qra) - what this line's price/item
+    // WOULD become at commit time under the customer's active QRA
+    // agreement, if any. item_nb/item_desc above still show what the
+    // salesman actually said/ordered - never mutated by this preview.
+    val qra_unit_price: String? = null,
+    val qra_is_free: Boolean = false,
+    val qra_substituted_item_nb: String? = null,
+    val qra_substituted_item_desc: String? = null,
+)
+
+/** A free bonus line QRA would add at commit time - has no corresponding
+ * LineOut yet, so it can't live on one. */
+@Serializable
+data class QraBonusLineOut(
+    val item_nb: String,
+    val item_desc: String,
+    val qty: String,
+    val uom: String? = null,
 )
 
 @Serializable
@@ -54,7 +101,6 @@ data class RequestDetail(
     val flags: List<String> = emptyList(),
     val cust_nb: String? = null,
     val customer_name: String? = null,
-    val phone_e164: String? = null,
     val transcript: String? = null,
     val transcript_conf: Double? = null,
     val language: String? = null,
@@ -65,6 +111,7 @@ data class RequestDetail(
     val target_order_nb: String? = null,
     val assigned_to: String? = null,
     val lines: List<LineOut> = emptyList(),
+    val qra_bonus_lines: List<QraBonusLineOut> = emptyList(),
 )
 
 @Serializable
@@ -74,7 +121,6 @@ data class LineEditIn(
     val item_desc: String? = null,
     val qty: String? = null,
     val uom: String? = null,
-    val remember_alias: Boolean = false,
 )
 
 @Serializable
@@ -92,9 +138,6 @@ data class AcceptOut(val order_nb: String, val order_type: String)
 
 @Serializable
 data class RejectIn(val reason: String, val note: String? = null)
-
-@Serializable
-data class CallbackIn(val note: String? = null)
 
 @Serializable
 data class OkOut(val ok: Boolean)

@@ -1,5 +1,6 @@
 package com.vendo.app.navigation
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -19,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vendo.app.AppViewModel
+import com.vendo.app.CacheRefreshEvent
 import com.vendo.app.SessionState
 import com.vendo.app.login.LoginScreen
 import com.vendo.app.logquery.LogQueryScreen
@@ -32,15 +35,19 @@ import com.vendo.core.designsystem.components.VendoTopBar
 import com.vendo.core.network.AuthEvent
 import kotlinx.coroutines.launch
 
+// route null marks an action, not a screen - onDestinationClick below
+// dispatches by label for these rather than navigating.
+private const val REFRESH_DATA_LABEL = "Refresh Data"
+private const val LOG_OUT_LABEL = "Log Out"
+
 private val DRAWER_DESTINATIONS = listOf(
     DrawerDestination("Record", VendoDestinations.RECORD),
     DrawerDestination("Request", VendoDestinations.requestRouteDefault()),
     DrawerDestination("Log Query", VendoDestinations.LOG_QUERY),
     DrawerDestination("Account Info", VendoDestinations.ACCOUNT),
     DrawerDestination("Change Password", VendoDestinations.CHANGE_PASSWORD),
-    // route null: an action, not a screen - VendoNavGraph's
-    // onDestinationClick logs out instead of navigating.
-    DrawerDestination("Log Out", null),
+    DrawerDestination(REFRESH_DATA_LABEL, null),
+    DrawerDestination(LOG_OUT_LABEL, null),
 )
 
 @Composable
@@ -54,6 +61,7 @@ fun VendoNavGraph(
     val scope = rememberCoroutineScope()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val context = LocalContext.current
 
     // ModalNavigationDrawer doesn't consume system back on its own - without
     // this, back-while-open falls through to the Activity and exits the app
@@ -69,6 +77,25 @@ fun VendoNavGraph(
                     popUpTo(navController.graph.id) { inclusive = true }
                 }
             }
+        }
+    }
+
+    // A Toast (not a Snackbar/scaffold) since Refresh Data is reachable
+    // from every screen via the drawer, and this graph wraps all of them -
+    // a single collector here covers every entry point without each
+    // screen needing its own SnackbarHost wiring.
+    LaunchedEffect(Unit) {
+        appViewModel.cacheRefreshEvents.collect { event ->
+            val message = when (event) {
+                is CacheRefreshEvent.Started -> "Refreshing customers, items, and recent orders…"
+                is CacheRefreshEvent.Succeeded ->
+                    "Synced ${event.customers} customers, ${event.items} items, " +
+                        "${event.orders} recent orders."
+                is CacheRefreshEvent.Failed -> "Refresh failed: ${event.message}"
+            }
+            val duration = if (event is CacheRefreshEvent.Failed) Toast.LENGTH_LONG
+                          else Toast.LENGTH_SHORT
+            Toast.makeText(context, message, duration).show()
         }
     }
 
@@ -94,12 +121,14 @@ fun VendoNavGraph(
                 onDestinationClick = { dest ->
                     scope.launch { drawerState.close() }
                     val route = dest.route
-                    if (route != null) {
-                        navController.navigate(route) { launchSingleTop = true }
-                    } else {
-                        appViewModel.logOut()
-                        navController.navigate(VendoDestinations.LOGIN) {
-                            popUpTo(navController.graph.id) { inclusive = true }
+                    when {
+                        route != null -> navController.navigate(route) { launchSingleTop = true }
+                        dest.label == REFRESH_DATA_LABEL -> appViewModel.refreshCache()
+                        else -> {
+                            appViewModel.logOut()
+                            navController.navigate(VendoDestinations.LOGIN) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
                         }
                     }
                 },
@@ -145,9 +174,6 @@ fun VendoNavGraph(
                             }
                         },
                         onRejected = {
-                            navController.popBackStack(VendoDestinations.RECORD, inclusive = false)
-                        },
-                        onCalledBack = {
                             navController.popBackStack(VendoDestinations.RECORD, inclusive = false)
                         },
                     )

@@ -139,6 +139,7 @@ fun matchMethodLabel(method: String?): String? = when (method) {
     "substring" -> "Found in speech"
     "prior_order" -> "From a previous order"
     "manual" -> "Manually chosen"
+    "offline_cache" -> "From offline cache"
     else -> null
 }
 

@@ -4,15 +4,18 @@ import com.vendo.core.network.dto.AcceptIn
 import com.vendo.core.network.dto.AcceptOut
 import com.vendo.core.network.dto.AccountUpdateIn
 import com.vendo.core.network.dto.ActivityLogOut
-import com.vendo.core.network.dto.CallbackIn
 import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.ChangePasswordIn
 import com.vendo.core.network.dto.CustomerCandidateOut
 import com.vendo.core.network.dto.IngestVoiceOut
 import com.vendo.core.network.dto.LoginIn
 import com.vendo.core.network.dto.LoginOut
+import com.vendo.core.network.dto.CustomerCacheOut
+import com.vendo.core.network.dto.ItemCacheOut
 import com.vendo.core.network.dto.OkOut
+import com.vendo.core.network.dto.QraHeaderCacheOut
 import com.vendo.core.network.dto.QueueRow
+import com.vendo.core.network.dto.RecentOrderOut
 import com.vendo.core.network.dto.RejectIn
 import com.vendo.core.network.dto.RequestDetail
 import com.vendo.core.network.dto.SalesmanOut
@@ -76,6 +79,20 @@ interface ApiService {
     @GET("customers/search")
     suspend fun searchCustomers(@Query("q") q: String): List<CustomerCandidateOut>
 
+    // ---- offline cache refresh (see core/datastore's CacheRepository) ----
+
+    @GET("customers/all")
+    suspend fun listAllCustomers(): List<CustomerCacheOut>
+
+    @GET("items/all")
+    suspend fun listAllItems(): List<ItemCacheOut>
+
+    @GET("orders/recent")
+    suspend fun listRecentOrders(@Query("limit") limit: Int = 30): List<RecentOrderOut>
+
+    @GET("qra/all")
+    suspend fun listAllQra(): List<QraHeaderCacheOut>
+
     @POST("queue/{reqId}/claim")
     suspend fun claim(@Path("reqId") reqId: Int): OkOut
 
@@ -84,9 +101,6 @@ interface ApiService {
 
     @POST("requests/{reqId}/reject")
     suspend fun reject(@Path("reqId") reqId: Int, @Body body: RejectIn): OkOut
-
-    @POST("requests/{reqId}/callback")
-    suspend fun callback(@Path("reqId") reqId: Int, @Body body: CallbackIn): OkOut
 
     @GET("activity")
     suspend fun listActivity(

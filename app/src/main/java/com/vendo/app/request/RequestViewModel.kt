@@ -1,8 +1,6 @@
 package com.vendo.app.request
 
 import android.content.Context
-import android.media.MediaPlayer
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +8,6 @@ import com.vendo.app.cache.CacheRepository
 import com.vendo.app.navigation.VendoDestinations
 import com.vendo.core.datastore.SettingsDataStore
 import com.vendo.core.network.ApiService
-import com.vendo.core.network.BuildConfig
 import com.vendo.core.network.dto.AcceptIn
 import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.CustomerCandidateOut
@@ -21,8 +18,6 @@ import com.vendo.core.network.dto.RequestDetail
 import com.vendo.core.network.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -194,11 +189,12 @@ class RequestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var progressJob: Job? = null
-
     private val _uiState = MutableStateFlow(RequestUiState())
     val uiState: StateFlow<RequestUiState> = _uiState.asStateFlow()
+
+    private val audioPlayer = RequestAudioPlayer(appContext, settings, viewModelScope) { transform ->
+        _uiState.value = transform(_uiState.value)
+    }
 
     private val requestedId: Int = savedStateHandle.get<Int>(VendoDestinations.REQUEST_ARG) ?: -1
 
@@ -495,100 +491,19 @@ class RequestViewModel @Inject constructor(
         }
     }
 
-    /** Streams the recording straight off the backend's /audio/{id} - no
-     * bearer token needed there, but the shared-secret API key is passed the
-     * same way AuthInterceptor adds it to Retrofit calls, since MediaPlayer's
-     * networking doesn't go through OkHttp. */
+    /** Delegates to RequestAudioPlayer, which owns the MediaPlayer instance
+     * and progress ticker - see its class doc. */
     fun togglePlayback() {
-        val player = mediaPlayer
-        if (player != null && !_uiState.value.isLoadingAudio) {
-            if (player.isPlaying) {
-                player.pause()
-                stopProgressTicker()
-                _uiState.value = _uiState.value.copy(isPlayingAudio = false)
-            } else {
-                player.start()
-                startProgressTicker()
-                _uiState.value = _uiState.value.copy(isPlayingAudio = true)
-            }
-            return
-        }
-        if (player != null) return
         val request = _uiState.value.request ?: return
-        _uiState.value = _uiState.value.copy(isLoadingAudio = true, error = null)
-        viewModelScope.launch {
-            try {
-                val url = resolveAudioUrl(request.audio_url)
-                val headers = if (BuildConfig.API_KEY.isNotBlank()) {
-                    mapOf("X-Api-Key" to BuildConfig.API_KEY)
-                } else {
-                    emptyMap()
-                }
-                mediaPlayer = MediaPlayer().apply {
-                    setDataSource(appContext, Uri.parse(url), headers)
-                    setOnPreparedListener {
-                        it.start()
-                        _uiState.value = _uiState.value.copy(
-                            isLoadingAudio = false, isPlayingAudio = true,
-                            playbackDurationMs = it.duration.coerceAtLeast(0),
-                        )
-                        startProgressTicker()
-                    }
-                    setOnCompletionListener {
-                        stopProgressTicker()
-                        _uiState.value = _uiState.value.copy(isPlayingAudio = false, playbackPositionMs = 0)
-                    }
-                    setOnErrorListener { _, _, _ ->
-                        stopProgressTicker()
-                        _uiState.value = _uiState.value.copy(
-                            isLoadingAudio = false,
-                            isPlayingAudio = false,
-                            error = "Couldn't play the recording.",
-                        )
-                        true
-                    }
-                    prepareAsync()
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingAudio = false,
-                    error = "Couldn't play the recording.",
-                )
-            }
-        }
+        audioPlayer.toggle(request.audio_url, _uiState.value.isLoadingAudio)
     }
 
     fun seekTo(ms: Int) {
-        mediaPlayer?.seekTo(ms)
-        _uiState.value = _uiState.value.copy(playbackPositionMs = ms)
-    }
-
-    private fun startProgressTicker() {
-        progressJob?.cancel()
-        progressJob = viewModelScope.launch {
-            while (true) {
-                val player = mediaPlayer ?: break
-                _uiState.value = _uiState.value.copy(playbackPositionMs = player.currentPosition)
-                delay(200)
-            }
-        }
-    }
-
-    private fun stopProgressTicker() {
-        progressJob?.cancel()
-        progressJob = null
-    }
-
-    private suspend fun resolveAudioUrl(path: String): String {
-        val stored = settings.currentServerUrl()?.takeIf { it.isNotBlank() }
-        val base = (stored ?: BuildConfig.BASE_URL).trimEnd('/')
-        return base + path
+        audioPlayer.seekTo(ms)
     }
 
     override fun onCleared() {
-        stopProgressTicker()
-        mediaPlayer?.release()
-        mediaPlayer = null
+        audioPlayer.release()
         super.onCleared()
     }
 }

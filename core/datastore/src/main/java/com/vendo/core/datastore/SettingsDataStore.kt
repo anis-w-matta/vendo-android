@@ -20,6 +20,7 @@ private object Keys {
     val DARK_MODE = booleanPreferencesKey("dark_mode")
     val AUTH_TOKEN = stringPreferencesKey("auth_token")
     val LOGIN_ID = stringPreferencesKey("login_id")
+    val ROLE = stringPreferencesKey("role")
     val SERVER_URL = stringPreferencesKey("server_url")
 }
 
@@ -42,10 +43,18 @@ class SettingsDataStore @Inject constructor(@ApplicationContext context: Context
 
     val loginId: Flow<String?> = store.data.map { it[Keys.LOGIN_ID] }
 
-    suspend fun saveSession(token: String, loginId: String) {
+    /** The logged-in account's role ("salesman"/"admin", from LoginOut.role) -
+     * used by the admin app to refuse a non-admin login client-side (the
+     * real enforcement is always server-side; this is just so a salesman
+     * account gets a clear message instead of a confusing empty admin
+     * app). Unused by :app today. */
+    val role: Flow<String?> = store.data.map { it[Keys.ROLE] }
+
+    suspend fun saveSession(token: String, loginId: String, role: String) {
         store.edit {
             it[Keys.AUTH_TOKEN] = token
             it[Keys.LOGIN_ID] = loginId
+            it[Keys.ROLE] = role
         }
     }
 
@@ -53,6 +62,7 @@ class SettingsDataStore @Inject constructor(@ApplicationContext context: Context
         store.edit {
             it.remove(Keys.AUTH_TOKEN)
             it.remove(Keys.LOGIN_ID)
+            it.remove(Keys.ROLE)
         }
     }
 

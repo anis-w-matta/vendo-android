@@ -29,6 +29,24 @@ data class CustomerCacheOut(
     val customer_name: String,
 )
 
+/** Full single-customer detail, including the owning salesman - backs the
+ * admin app's Customers screen (backend: GET /customers/{cust_nb}). */
+@Serializable
+data class CustomerDetailOut(
+    val cust_nb: String,
+    val customer_name: String,
+    val email: String? = null,
+    val telephone: String? = null,
+    val city: String? = null,
+    val address1: String? = null,
+    val salesman_id: String? = null,
+)
+
+/** Admin-only customer reassignment (backend: PATCH /customers/{cust_nb}/salesman).
+ * salesman_id = null clears the assignment. */
+@Serializable
+data class AssignSalesmanIn(val salesman_id: String? = null)
+
 @Serializable
 data class ItemCacheOut(
     val item_nb: String,

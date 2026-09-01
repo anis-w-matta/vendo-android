@@ -4,9 +4,11 @@ import com.vendo.core.network.dto.AcceptIn
 import com.vendo.core.network.dto.AcceptOut
 import com.vendo.core.network.dto.AccountUpdateIn
 import com.vendo.core.network.dto.ActivityLogOut
+import com.vendo.core.network.dto.AssignSalesmanIn
 import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.ChangePasswordIn
 import com.vendo.core.network.dto.CustomerCandidateOut
+import com.vendo.core.network.dto.CustomerDetailOut
 import com.vendo.core.network.dto.IngestVoiceOut
 import com.vendo.core.network.dto.LoginIn
 import com.vendo.core.network.dto.LoginOut
@@ -16,9 +18,11 @@ import com.vendo.core.network.dto.OkOut
 import com.vendo.core.network.dto.QraHeaderCacheOut
 import com.vendo.core.network.dto.QueueRow
 import com.vendo.core.network.dto.RecentOrderOut
+import com.vendo.core.network.dto.RegisterIn
 import com.vendo.core.network.dto.RejectIn
 import com.vendo.core.network.dto.RequestDetail
 import com.vendo.core.network.dto.SalesmanOut
+import com.vendo.core.network.dto.SalesmanUpdateIn
 import com.vendo.core.network.dto.TranscribePreviewOut
 import com.vendo.core.network.dto.VoiceStatusOut
 import okhttp3.MultipartBody
@@ -110,4 +114,29 @@ interface ApiService {
         @Query("limit") limit: Int = 100,
         @Query("offset") offset: Int = 0,
     ): List<ActivityLogOut>
+
+    // ---- admin-only (see :admin app) ----
+
+    @GET("customers/{custNb}")
+    suspend fun getCustomerDetail(@Path("custNb") custNb: String): CustomerDetailOut
+
+    @PATCH("customers/{custNb}/salesman")
+    suspend fun assignCustomerSalesman(
+        @Path("custNb") custNb: String,
+        @Body body: AssignSalesmanIn,
+    ): CustomerDetailOut
+
+    @GET("salesmen")
+    suspend fun listSalesmen(
+        @Query("include_inactive") includeInactive: Boolean = false,
+    ): List<SalesmanOut>
+
+    @PATCH("salesmen/{loginId}")
+    suspend fun updateSalesman(
+        @Path("loginId") loginId: String,
+        @Body body: SalesmanUpdateIn,
+    ): SalesmanOut
+
+    @POST("auth/register")
+    suspend fun register(@Body body: RegisterIn): SalesmanOut
 }

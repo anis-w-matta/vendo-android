@@ -27,6 +27,7 @@ import com.vendo.app.login.LoginScreen
 import com.vendo.app.logquery.LogQueryScreen
 import com.vendo.app.menu.AccountScreen
 import com.vendo.app.menu.ChangePasswordScreen
+import com.vendo.app.orderhistory.OrderHistoryScreen
 import com.vendo.app.record.RecordScreen
 import com.vendo.app.request.RequestScreen
 import com.vendo.core.designsystem.components.DrawerDestination
@@ -44,6 +45,7 @@ private val DRAWER_DESTINATIONS = listOf(
     DrawerDestination("Record", VendoDestinations.RECORD),
     DrawerDestination("Request", VendoDestinations.requestRouteDefault()),
     DrawerDestination("Log Query", VendoDestinations.LOG_QUERY),
+    DrawerDestination("Order History", VendoDestinations.ORDER_HISTORY),
     DrawerDestination("Account Info", VendoDestinations.ACCOUNT),
     DrawerDestination("Change Password", VendoDestinations.CHANGE_PASSWORD),
     DrawerDestination(REFRESH_DATA_LABEL, null),
@@ -184,6 +186,9 @@ fun VendoNavGraph(
                             navController.navigate(VendoDestinations.requestRoute(requestId))
                         },
                     )
+                }
+                composable(VendoDestinations.ORDER_HISTORY) {
+                    OrderHistoryScreen()
                 }
                 composable(VendoDestinations.ACCOUNT) {
                     AccountScreen()

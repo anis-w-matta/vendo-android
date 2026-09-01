@@ -7,7 +7,7 @@ import androidx.room.TypeConverters
 @Database(
     entities = [CachedCustomerEntity::class, CachedItemEntity::class, CachedOrderEntity::class,
                CachedQraHeaderEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(CacheConverters::class)

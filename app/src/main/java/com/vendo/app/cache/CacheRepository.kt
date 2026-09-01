@@ -10,6 +10,7 @@ import com.vendo.core.datastore.cache.CachedQraHeaderEntity
 import com.vendo.core.network.ApiService
 import com.vendo.core.network.dto.CandidateOut
 import com.vendo.core.network.dto.CustomerCandidateOut
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,7 +57,7 @@ class CacheRepository @Inject constructor(
                 sortOrder = index,
                 lines = o.lines.map { l ->
                     CachedOrderLine(itemNb = l.item_nb, itemDesc = l.item_desc,
-                                    qty = l.qty, uom = l.uom)
+                                    qty = l.qty, uom = l.uom, isFree = l.is_free)
                 },
             )
         })
@@ -99,4 +100,9 @@ class CacheRepository @Inject constructor(
             CandidateOut(item_nb = it.itemNb, item_desc = it.itemDesc,
                         category = it.category, score = 100.0, method = "offline_cache")
         }
+
+    /** The cached recent orders, most-recent-first - backs the Order
+     * History screen. Reactive: updates on its own once a Refresh
+     * repopulates the cache, no separate reload needed. */
+    fun observeOrders(): Flow<List<CachedOrderEntity>> = dao.observeOrders()
 }

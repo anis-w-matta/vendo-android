@@ -31,6 +31,9 @@ data class CachedOrderLine(
     val itemDesc: String,
     val qty: String,
     val uom: String?,
+    // True only for a bonus line the QRA engine added at commit time -
+    // see backend's app/services/qra_engine.py.
+    val isFree: Boolean = false,
 )
 
 /** One of this salesman's own most recently committed orders -

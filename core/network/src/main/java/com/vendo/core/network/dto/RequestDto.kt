@@ -42,6 +42,7 @@ data class RecentOrderLineOut(
     val item_desc: String,
     val qty: String,
     val uom: String? = null,
+    val is_free: Boolean = false,
 )
 
 @Serializable

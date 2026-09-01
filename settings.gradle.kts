@@ -19,6 +19,7 @@ dependencyResolutionManagement {
 rootProject.name = "VeNdO"
 
 include(":app")
+include(":admin")
 include(":core:designsystem")
 include(":core:datastore")
 include(":core:network")

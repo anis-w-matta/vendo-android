@@ -40,6 +40,7 @@ fun VendoTopBar(
     onMenuClick: () -> Unit,
     onThemeToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    title: String = "VeNdO",
 ) {
     Box(
         modifier = modifier
@@ -62,7 +63,7 @@ fun VendoTopBar(
         }
 
         Text(
-            text = "VeNdO",
+            text = title,
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.align(Alignment.Center),
